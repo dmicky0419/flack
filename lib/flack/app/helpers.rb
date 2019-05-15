@@ -120,7 +120,7 @@ class Flack::App
     h = {}
 
     h['self'] = {
-      href: rel(env, env['REQUEST_PATH']) }
+      href: rel(env, env['PATH_INFO']) }
     m = env['REQUEST_METHOD']
     h['self'][:method] = m unless %w[ GET HEAD ].include?(m)
 

@@ -34,7 +34,7 @@ describe '/debug' do
 
       expect(r[0]).to eq(200)
       expect(r[1]['Content-Type']).to eq('application/json')
-      expect(JSON.parse(r[2].join)['REQUEST_PATH']).to eq('/debug')
+      expect(JSON.parse(r[2].join)['PATH_INFO']).to eq('/debug')
     end
   end
 end

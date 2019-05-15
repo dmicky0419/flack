@@ -28,7 +28,6 @@ module Helpers
     {
       'REQUEST_METHOD' => me,
       'PATH_INFO' => pa,
-      'REQUEST_PATH' => pa,
       'QUERY_STRING' => qs,
       'REQUEST_URI' => "http://#{ho}#{pa}#{qs.empty? ? '' : '?'}#{qs}",
       'SCRIPT_NAME' => sn,
