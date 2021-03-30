@@ -1,3 +1,4 @@
+# frozen_string_literal: true
 
 # /executions/*
 #
@@ -10,7 +11,14 @@ class Flack::App
 # TODO implement paging
     env['flack.rel'] = 'flack:executions'
 
-    respond(env, @unit.executions.all)
+    qs = CGI.parse(env['QUERY_STRING'] || '')
+    statuses = qs['status']
+    statuses = nil if statuses == []
+
+    q = @unit.executions
+    q = q.where(status: statuses) if statuses
+
+    respond(env, q.all)
   end
 
   # GET /executions/<id>
@@ -42,6 +50,39 @@ class Flack::App
     end
   end
 
+  # DELETE /executions/<exid>
+  #
+  def delete_executions_s(env)
+
+    exid = env['flack.args'][0]
+
+    return respond_not_found(env) \
+      unless @unit.executions.where(exid: exid).count > 0
+
+    r = { exid: exid, counts: {} }
+    cs = r[:counts]
+
+    @unit.storage.db.transaction do
+
+      cs[:messages] = @unit.messages.where(exid: exid).count
+      cs[:executions] = @unit.executions.where(exid: exid).count
+      cs[:pointers] = @unit.pointers.where(exid: exid).count
+      cs[:timers] = @unit.timers.where(exid: exid).count
+      cs[:traps] = @unit.traps.where(exid: exid).count
+        #
+        # not sure if the DB adapter returns the DELETE count,
+        # so counting first
+
+      @unit.messages.where(exid: exid).delete
+      @unit.executions.where(exid: exid).delete
+      @unit.pointers.where(exid: exid).delete
+      @unit.timers.where(exid: exid).delete
+      @unit.traps.where(exid: exid).delete
+    end
+
+    respond(env, r)
+  end
+
   protected
 
   def get_executions_by_exid(env, exid)
@@ -56,6 +97,10 @@ class Flack::App
   end
 
   def get_executions_by_domain(env, dom)
+
+    qs = CGI.parse(env['QUERY_STRING'] || '')
+    statuses = qs['status']
+    statuses = nil if statuses == []
 
     q = @unit.executions
 
@@ -73,6 +118,8 @@ class Flack::App
       env['flack.rel'] = 'flack:executions/domain'
       q = q.where(domain: dom)
     end
+
+    q = q.where(status: statuses) if statuses
 
     respond(env, q.all)
   end

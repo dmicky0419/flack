@@ -41,6 +41,20 @@ describe '/executions' do
       end
     end
 
+    describe 'GET /executions?status=active' do
+
+      it 'returns an empty list' do
+
+        r = @app.call(make_env(path: '/executions', qs: 'status=active'))
+
+        expect(r[0]).to eq(200)
+        expect(r[1]['Content-Type']).to eq('application/json')
+
+        j = JSON.parse(r[2].first)
+        expect(j['_embedded']).to eq({ 'flack:executions' => [] })
+      end
+    end
+
     describe 'GET /executions/:exid' do
 
       it 'goes 404 when the execution does not exist' do
@@ -111,6 +125,10 @@ describe '/executions' do
         .collect { |d| @app.unit.launch(%{ stall _ }, domain: d) }
         .sort
       @app.unit.wait('idle')
+
+      @app.unit.executions
+        .where(domain: %w[ net.ntt.hr net.nttc ])
+        .update(status: 'terminated')
     end
 
     describe 'GET /executions' do
@@ -143,6 +161,41 @@ describe '/executions' do
             .sort
         ).to eq(%w[
           net.ntt net.ntt net.ntt.finance net.ntt.hr net.nttc
+        ])
+      end
+    end
+
+    describe 'GET /executions?status=active' do
+
+      it 'lists the executions' do
+
+        r = @app.call(make_env(path: '/executions', qs: 'status=active'))
+
+        expect(r[0]).to eq(200)
+        expect(r[1]['Content-Type']).to eq('application/json')
+
+        j = JSON.parse(r[2].first)
+
+        expect(
+          j['_embedded'].keys
+        ).to eq(%w[
+          flack:executions
+        ])
+
+        expect(
+          j['_embedded'].values.first
+            .collect { |e| e['exid'] }
+            .sort
+        ).to eq(
+          @exids
+            .reject { |i| i.match(/\A(net\.ntt\.hr|net.nttc)-/) }
+        )
+        expect(
+          j['_embedded'].values.first
+            .collect { |e| e['domain'] }
+            .sort
+        ).to eq(%w[
+          net.ntt net.ntt net.ntt.finance
         ])
       end
     end
@@ -260,6 +313,55 @@ describe '/executions' do
           net.ntt.finance net.ntt.hr
         ])
       end
+    end
+  end
+
+  describe 'DELETE /executions/:exid' do
+
+    before :each do
+
+      @exids = %w[ net.ntt net.ntt.hr ]
+        .collect { |d| @app.unit.launch(%{ sleep '1d' }, domain: d) }
+        .sort
+      @app.unit.wait('idle')
+    end
+
+    it 'goes 200 if the execution exists' do
+
+      exid = @exids.first
+#p exid
+
+      r = @app.call(make_env(me: 'DELETE', path: "/executions/#{exid}"))
+
+      expect(r[0]).to eq(200)
+      expect(r[1]['Content-Type']).to eq('application/json')
+
+      j = JSON.parse(r[2].first)
+#pp j
+
+      expect(j['_links']['self']
+        ).to eq(
+          'href' => "/executions/#{exid}", 'method' => 'DELETE')
+
+      expect(j['exid']
+        ).to eq(exid)
+      expect(j['counts']
+        ).to eq(
+          'messages' => 0, 'executions' => 1, 'pointers' => 0,
+          'timers' => 1, 'traps' => 0)
+
+      expect(@app.unit.executions.map(:exid).sort
+        ).to eq(@exids - [ exid ])
+    end
+
+    it 'goes 404 if the execution does not exist' do
+
+      exid = @exids.first + 'NADA'
+
+      r = @app.call(make_env(me: 'DELETE', path: "/executions/#{exid}"))
+
+      expect(r[0]).to eq(404)
+      expect(r[1]['Content-Type']).to eq('application/json')
     end
   end
 end

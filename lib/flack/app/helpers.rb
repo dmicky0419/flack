@@ -1,3 +1,4 @@
+# frozen_string_literal: true
 
 # helpers
 #
@@ -108,12 +109,18 @@ class Flack::App
     l[:templated] = true if type.index('{')
 
     rel_right_part = type
+      .gsub(/\{\?[^}]*\}/, '')
       .gsub(/[{}]/, '')
       .gsub(/\./, '-dot')
       .gsub(/\*/, '-star')
 
     h["flack:#{rel_right_part}"] = l
   end
+
+  CURIES = [ {
+    name: 'flack',
+    href: 'https://github.com/floraison/flack/blob/master/doc/rels.md#{rel}',
+    templated: true } ].freeze
 
   def links(env)
 
@@ -124,15 +131,12 @@ class Flack::App
     m = env['REQUEST_METHOD']
     h['self'][:method] = m unless %w[ GET HEAD ].include?(m)
 
-    h['curies'] = [{
-      name: 'flack',
-      href: 'https://github.com/floraison/flack/blob/master/doc/rels.md#{rel}',
-      templated: true }]
+    h['curies'] = CURIES
 
-    link(env, h, 'executions')
-    link(env, h, 'executions/{domain}')
-    link(env, h, 'executions/{domain}*')
-    link(env, h, 'executions/{domain}.*')
+    link(env, h, 'executions{?status}')
+    link(env, h, 'executions/{domain}{?status}')
+    link(env, h, 'executions/{domain}*{?status}')
+    link(env, h, 'executions/{domain}.*{?status}')
     link(env, h, 'executions/{exid}')
     link(env, h, 'executions/{id}')
 
@@ -142,6 +146,12 @@ class Flack::App
     link(env, h, 'messages/{exid}')
     link(env, h, 'messages/{id}')
 
+    link(env, h, 'pointers{?type}')
+    link(env, h, 'pointers/{exid}{?type}')
+    link(env, h, 'pointers/{domain}{?type}')
+    link(env, h, 'pointers/{domain}*{?type}')
+    link(env, h, 'pointers/{domain}.*{?type}')
+
     h
   end
 
@@ -149,10 +159,18 @@ class Flack::App
 
     h = {}
 
+    h['curies'] = CURIES
+
     h['flack:forms/message'] = {
       action: rel(env, '/message'),
       method: 'POST',
       _inputs: { 'flack:forms/message-content' => { type: 'json' } } }
+
+    h['flack:forms/execution-deletion'] = {
+      action: rel(env, '/executions/{exid}'),
+      method: 'DELETE',
+      _inputs: {},
+      templated: true }
 
     h
   end

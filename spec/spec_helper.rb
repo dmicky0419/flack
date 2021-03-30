@@ -15,18 +15,17 @@ module Helpers
 
   def make_env(opts)
 
-    me = opts[:method] || 'GET'
+    me = opts[:method] || opts[:me] || 'GET'
     ho = opts[:host] || '127.0.0.1:7006'
-    pa = opts[:path] || '/'
-    qs = opts[:query] || ''
+    pa = opts[:path] || opts[:pa] || opts[:p] || '/'
+    qs = opts[:query] || opts[:qs] || ''
     sn = opts[:script_name] || ''
 
     body = opts[:body]
     body = JSON.dump(body) if body && ! body.is_a?(String)
     ri = body ? StringIO.new(body) : nil
 
-    {
-      'REQUEST_METHOD' => me,
+    { 'REQUEST_METHOD' => me,
       'PATH_INFO' => pa,
       'QUERY_STRING' => qs,
       'REQUEST_URI' => "http://#{ho}#{pa}#{qs.empty? ? '' : '?'}#{qs}",
@@ -34,8 +33,7 @@ module Helpers
       'HTTP_HOST' => ho,
       'HTTP_VERSION' => 'HTTP/1.1',
       'rack.url_scheme' => 'http',
-      'rack.input' => ri
-    }
+      'rack.input' => ri }
   end
 
   def jdump(o)

@@ -1,3 +1,4 @@
+# frozen_string_literal: true
 
 require 'flack/app/helpers'
   #
@@ -6,6 +7,7 @@ require 'flack/app/static'
 require 'flack/app/message'
 require 'flack/app/executions'
 require 'flack/app/messages'
+require 'flack/app/pointers'
 
 
 class Flack::App
@@ -99,6 +101,7 @@ class Flack::App
     .collect(&:to_s)
     .select { |m| m.match(/\A(get|head|put|post|delete)_.+\z/) }
     .select { |m| instance_method(m).arity == 1 }
+    .sort
     .collect { |m|
       s = m.split('_')
       if s.length == 3 && s[2] == 'suffix'
